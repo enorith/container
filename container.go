@@ -28,7 +28,6 @@ func (ic injectionChain) do(abs interface{}) (va reflect.Value, e error) {
 	t := reflection.TypeOf(abs)
 	ts := reflection.StructType(abs)
 	va = reflect.New(ts)
-
 	for _, v := range ic {
 		va, e = v(abs, va)
 		if e != nil {
@@ -36,7 +35,7 @@ func (ic injectionChain) do(abs interface{}) (va reflect.Value, e error) {
 		}
 	}
 
-	if t.Kind() == reflect.Struct && va.Kind() == reflect.Ptr {
+	if t.Kind() != reflect.Ptr && va.Kind() == reflect.Ptr {
 		va = va.Elem()
 	}
 
