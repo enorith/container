@@ -3,8 +3,9 @@ package container
 import (
 	"errors"
 	"fmt"
-	"github.com/enorith/supports/reflection"
 	"reflect"
+
+	"github.com/enorith/supports/reflection"
 )
 
 // InstanceRegister register instance for container
@@ -105,7 +106,6 @@ func (c *Container) Bind(abstract, instance interface{}, singleton bool) {
 	c.singletons[typ] = singleton
 }
 
-
 func (c *Container) BindFunc(abs interface{}, register InstanceRegister, singleton bool) {
 	c.Bind(abs, register, singleton)
 }
@@ -164,7 +164,7 @@ func (c *Container) getResolver(instance interface{}) InstanceRegister {
 	return r
 }
 
-func (c *Container) Instance(abs interface{}, params ...interface{}) (instance reflect.Value,e error) {
+func (c *Container) Instance(abs interface{}, params ...interface{}) (instance reflect.Value, e error) {
 	defer func() {
 		if x := recover(); x != nil {
 			instance = reflect.Value{}
