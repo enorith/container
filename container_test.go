@@ -2,10 +2,11 @@ package container_test
 
 import (
 	"fmt"
-	"github.com/enorith/container"
-	"github.com/enorith/supports/reflection"
 	"reflect"
 	"testing"
+
+	"github.com/enorith/container"
+	"github.com/enorith/supports/reflection"
 )
 
 type foo struct {
@@ -261,4 +262,33 @@ func TestContainer_InjectionChain(t *testing.T) {
 	} else {
 		t.Fatalf("invoke failed")
 	}
+}
+
+type TypeFoo struct {
+	Name string
+}
+
+func (tf TypeFoo) GetName() string {
+	return tf.Name
+}
+
+type TypeBar struct {
+	TypeFoo
+}
+
+func CallTypeBar(tb TypeBar) string {
+	return tb.GetName()
+}
+
+func TestContainer_InstanceConstructInject(t *testing.T) {
+	c := container.New()
+	c.BindFunc(TypeFoo{}, func(c *container.Container) reflect.Value {
+		return reflect.ValueOf(TypeFoo{"tome"})
+	}, false)
+
+	res, e := c.Invoke(CallTypeBar)
+	if e != nil {
+		t.Fatal(e)
+	}
+	t.Logf("invoke result %v", res)
 }

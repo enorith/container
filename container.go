@@ -210,6 +210,23 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 	} else {
 		fallback()
 	}
+	if instance.IsValid() {
+
+		switch instance.Kind() {
+		case reflect.Ptr, reflect.Struct:
+			ind := reflect.Indirect(instance)
+			for i := 0; i < ind.NumField(); i++ {
+				fv := ind.Field(i)
+				if fv.CanSet() && (fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Struct) {
+					v, e := c.Instance(fv.Type())
+					if e == nil {
+						reflect.Indirect(fv).Set(v)
+					}
+				}
+			}
+		}
+
+	}
 
 	for k, p := range params {
 		if tp, ok := p.(reflect.Value); ok {
