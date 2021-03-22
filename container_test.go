@@ -273,7 +273,7 @@ func (tf TypeFoo) GetName() string {
 }
 
 type TypeBar struct {
-	TypeFoo
+	*TypeFoo
 }
 
 func CallTypeBar(tb TypeBar) string {
@@ -282,6 +282,10 @@ func CallTypeBar(tb TypeBar) string {
 
 func TestContainer_InstanceConstructInject(t *testing.T) {
 	c := container.New()
+	c.BindFunc(&TypeFoo{}, func(c *container.Container) reflect.Value {
+		return reflect.ValueOf(&TypeFoo{"tome"})
+	}, false)
+
 	c.BindFunc(TypeFoo{}, func(c *container.Container) reflect.Value {
 		return reflect.ValueOf(TypeFoo{"tome"})
 	}, false)

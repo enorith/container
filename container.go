@@ -164,6 +164,7 @@ func (c *Container) getResolver(instance interface{}) InstanceRegister {
 	return r
 }
 
+// Instance return reflect.Value of gaving abstract
 func (c *Container) Instance(abs interface{}, params ...interface{}) (instance reflect.Value, e error) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -177,12 +178,16 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		}
 	}()
 
+	// whether this abstract is constructed
+	constructed := false
+
 	fallback := func() {
 		var va reflect.Value
 		va, e = c.injectionChain.do(abs)
 
 		if va.IsValid() {
 			instance = va
+			constructed = true
 		} else {
 			instance = reflect.Value{}
 		}
@@ -191,6 +196,7 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 	if t, ok := abs.(string); ok {
 		if r := c.getResolve(t); r.IsValid() {
 			instance = r
+			constructed = true
 		} else {
 			fallback()
 		}
@@ -198,6 +204,7 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		str := t.String()
 		if r := c.getResolve(str); r.IsValid() {
 			instance = r
+			constructed = true
 		} else {
 			fallback()
 		}
@@ -206,12 +213,15 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		str := reflection.TypeString(abs)
 		if r := c.getResolve(str); r.IsValid() {
 			instance = r
+			constructed = true
 		}
 	} else {
 		fallback()
 	}
-	if instance.IsValid() {
 
+	if !constructed {
+
+		// coustruct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:
 			ind := reflect.Indirect(instance)
@@ -220,7 +230,7 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 				if fv.CanSet() && (fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Struct) {
 					v, e := c.Instance(fv.Type())
 					if e == nil {
-						reflect.Indirect(fv).Set(v)
+						fv.Set(v)
 					}
 				}
 			}
