@@ -9,7 +9,7 @@ import (
 )
 
 // InstanceRegister register instance for container
-type InstanceRegister func(c *Container) reflect.Value
+type InstanceRegister func(c Interface) reflect.Value
 
 // Injector interface for conditional initializer
 type Injector interface {
@@ -74,21 +74,20 @@ type Container struct {
 	injectionChain injectionChain
 }
 
-func (c *Container) WithInjector(h Injector) *Container {
-	return c.InjectionWith(conditionInjectionFunc(ConditionInjectionFunc(h.When), h.Injection))
+func (c *Container) WithInjector(h Injector) {
+	c.InjectionWith(conditionInjectionFunc(ConditionInjectionFunc(h.When), h.Injection))
 }
 
-func (c *Container) InjectionWith(i InjectionFunc) *Container {
+func (c *Container) InjectionWith(i InjectionFunc) {
 	c.injectionChain = append(c.injectionChain, i)
-	return c
 }
 
-func (c *Container) InjectionRequire(requireAbs interface{}, i InjectionFunc) *Container {
-	return c.InjectionWith(conditionInjectionFunc(requireAbs, i))
+func (c *Container) InjectionRequire(requireAbs interface{}, i InjectionFunc)  {
+	c.InjectionWith(conditionInjectionFunc(requireAbs, i))
 }
 
-func (c *Container) InjectionCondition(f ConditionInjectionFunc, i InjectionFunc) *Container {
-	return c.InjectionWith(conditionInjectionFunc(f, i))
+func (c *Container) InjectionCondition(f ConditionInjectionFunc, i InjectionFunc)  {
+	c.InjectionWith(conditionInjectionFunc(f, i))
 }
 
 // Bind pre-bind abstract to container
@@ -147,16 +146,16 @@ func (c *Container) MethodCall(abs interface{}, method string, params ...interfa
 }
 
 func (c *Container) getResolver(instance interface{}) InstanceRegister {
-	var r func(c *Container) reflect.Value
+	var r InstanceRegister
 
 	if t, ok := instance.(reflect.Type); ok {
-		r = func(c *Container) reflect.Value {
+		r = func(c Interface) reflect.Value {
 			return reflect.New(t).Elem()
 		}
 	} else if t, ok := instance.(InstanceRegister); ok {
 		r = t
 	} else {
-		r = func(c *Container) reflect.Value {
+		r = func(c Interface) reflect.Value {
 			return reflect.ValueOf(instance)
 		}
 	}
