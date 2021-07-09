@@ -264,16 +264,11 @@ func TestContainer_InjectionChain(t *testing.T) {
 	}
 }
 
-type TypeFoo struct {
-	Name string
-}
-
-func (tf TypeFoo) GetName() string {
-	return tf.Name
-}
-
 type TypeBar struct {
-	*TypeFoo
+}
+
+func (tf TypeBar) GetName() string {
+	return "bar"
 }
 
 func CallTypeBar(tb TypeBar) string {
@@ -282,13 +277,6 @@ func CallTypeBar(tb TypeBar) string {
 
 func TestContainer_InstanceConstructInject(t *testing.T) {
 	c := container.New()
-	c.BindFunc(&TypeFoo{}, func(c container.Interface) reflect.Value {
-		return reflect.ValueOf(&TypeFoo{"tome"})
-	}, false)
-
-	c.BindFunc(TypeFoo{}, func(c container.Interface) reflect.Value {
-		return reflect.ValueOf(TypeFoo{"tome"})
-	}, false)
 
 	res, e := c.Invoke(CallTypeBar)
 	if e != nil {
