@@ -74,8 +74,8 @@ func TestContainer_Invoke(t *testing.T) {
 	})
 
 	t.Run("invoke func injection", func(t *testing.T) {
-		c.BindFunc(&foo{}, func(c container.Interface) reflect.Value {
-			return reflect.ValueOf(&foo{name: "test foo"})
+		c.BindFunc(&foo{}, func(c container.Interface) (reflect.Value, error) {
+			return reflect.ValueOf(&foo{name: "test foo"}), nil
 		}, false)
 
 		outs, err := c.Invoke(funcBarInjection)
@@ -120,9 +120,9 @@ func TestTypeString(t *testing.T) {
 func TestContainer_InstanceFor(t *testing.T) {
 	c := container.New()
 
-	c.BindFunc("foo", func(c container.Interface) reflect.Value {
+	c.BindFunc("foo", func(c container.Interface) (reflect.Value, error) {
 
-		return reflect.ValueOf(&foo{"test name"})
+		return reflect.ValueOf(&foo{"test name"}), nil
 	}, false)
 
 	var f foo
@@ -192,8 +192,8 @@ func bindTable() []struct {
 	}{
 		{"string abs", "foo_s", &foo{name: "string abs"}, false},
 		{"string abs singleton", "foo_ss", &foo{name: "string abs singleton"}, true},
-		{"string abs func", "foo_s_f", container.InstanceRegister(func(c container.Interface) reflect.Value {
-			return reflect.ValueOf(&foo{name: "string abs func"})
+		{"string abs func", "foo_s_f", container.InstanceRegister(func(c container.Interface) (reflect.Value, error) {
+			return reflect.ValueOf(&foo{name: "string abs func"}), nil
 		}), false},
 		{"type abs", typ, &foo{name: "type abs"}, false},
 		{"object abs", &foo{}, &foo{name: "object abs"}, false},
