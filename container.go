@@ -224,15 +224,14 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		fallback()
 	}
 
-	if !constructed {
-
-		// coustruct injection
+	if constructed && instance.IsZero() {
+		// construct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:
 			ind := reflect.Indirect(instance)
 			for i := 0; i < ind.NumField(); i++ {
 				fv := ind.Field(i)
-				if fv.CanSet() && (fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Struct) {
+				if fv.IsZero() && fv.CanSet() && (fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Struct) {
 					v, e := c.Instance(fv.Type())
 					if e == nil {
 						fv.Set(v)
@@ -240,7 +239,6 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 				}
 			}
 		}
-
 	}
 
 	for k, p := range params {
