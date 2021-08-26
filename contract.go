@@ -2,14 +2,13 @@ package container
 
 import "reflect"
 
-
 type Interface interface {
 	BindFunc(abs interface{}, register InstanceRegister, singleton bool)
 	Bind(abstract, instance interface{}, singleton bool)
-	Instance(abs interface{}, params ...interface{}) (instance reflect.Value, e error)
-	InstanceFor(abs interface{}, out interface{}, params ...interface{}) error
-	Invoke(f interface{}, params ...interface{}) ([]reflect.Value, error)
-	MethodCall(abs interface{}, method string, params ...interface{}) ([]reflect.Value, error)
+	Instance(abs interface{}) (instance reflect.Value, e error)
+	InstanceFor(abs interface{}, out interface{}) error
+	Invoke(f interface{}) ([]reflect.Value, error)
+	MethodCall(abs interface{}, method string) ([]reflect.Value, error)
 	RegisterSingleton(instance interface{})
 	Register(instance interface{}, singleton bool)
 	Singleton(abs interface{}, instance interface{})
@@ -19,5 +18,5 @@ type Interface interface {
 	InjectionCondition(f ConditionInjectionFunc, i InjectionFunc)
 	IsSingleton(abs interface{}) bool
 	Bound(abs interface{}) bool
-	GetRegisters() map[string]InstanceRegister
+	GetRegisters() map[interface{}]InstanceRegister
 }

@@ -71,11 +71,11 @@ func conditionInjectionFunc(requireAbs interface{}, i InjectionFunc) InjectionFu
 
 //Container is a IoC-Container
 type Container struct {
-	registers map[string]InstanceRegister
+	registers map[interface{}]InstanceRegister
 
-	singletons map[string]bool
+	singletons map[interface{}]bool
 
-	resolved map[string]reflect.Value
+	resolved map[interface{}]reflect.Value
 
 	injectionChain injectionChain
 }
@@ -96,7 +96,7 @@ func (c *Container) InjectionCondition(f ConditionInjectionFunc, i InjectionFunc
 	c.InjectionWith(conditionInjectionFunc(f, i))
 }
 
-// Bind pre-bind abstract to container
+// Bind: pre-bind abstract to container
 // 	Abstract could be string,reflect.Type,struct or pointer
 // 	Instance could be reflect.Value, struct, pointer or InstanceRegister
 func (c *Container) Bind(abstract, instance interface{}, singleton bool) {
@@ -104,11 +104,10 @@ func (c *Container) Bind(abstract, instance interface{}, singleton bool) {
 	if instance == nil {
 		instance = abstract
 	}
+	key := absKey(abstract)
 
-	typ := reflection.TypeString(abstract)
-
-	c.registers[typ] = c.getResolver(instance)
-	c.singletons[typ] = singleton
+	c.registers[key] = c.getResolver(instance)
+	c.singletons[key] = singleton
 }
 
 func (c *Container) BindFunc(abs interface{}, register InstanceRegister, singleton bool) {
@@ -136,7 +135,7 @@ func (c *Container) IsSingleton(abs interface{}) bool {
 	return false
 }
 
-func (c *Container) MethodCall(abs interface{}, method string, params ...interface{}) ([]reflect.Value, error) {
+func (c *Container) MethodCall(abs interface{}, method string) ([]reflect.Value, error) {
 	instance, e := c.Instance(abs)
 	if e != nil {
 		return nil, e
@@ -148,7 +147,7 @@ func (c *Container) MethodCall(abs interface{}, method string, params ...interfa
 
 	m := instance.MethodByName(method)
 
-	return c.Invoke(m, params)
+	return c.Invoke(m)
 }
 
 func (c *Container) getResolver(instance interface{}) InstanceRegister {
@@ -162,7 +161,7 @@ func (c *Container) getResolver(instance interface{}) InstanceRegister {
 		r = t
 	} else {
 		r = func(c Interface) (reflect.Value, error) {
-			return reflect.ValueOf(instance), nil
+			return reflection.ValueOf(instance), nil
 		}
 	}
 
@@ -170,7 +169,7 @@ func (c *Container) getResolver(instance interface{}) InstanceRegister {
 }
 
 // Instance return reflect.Value of gaving abstract
-func (c *Container) Instance(abs interface{}, params ...interface{}) (instance reflect.Value, e error) {
+func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) {
 	defer func() {
 		if x := recover(); x != nil {
 			instance = reflect.Value{}
@@ -198,7 +197,7 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		}
 	}
 
-	resolve := func(abs string) {
+	resolve := func(abs interface{}) {
 		resolved, err := c.getResolve(abs)
 		if _, ok := e.(UnregisterdAbstractError); !ok {
 			e = err
@@ -212,17 +211,7 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		}
 	}
 
-	if t, ok := abs.(string); ok {
-		resolve(t)
-	} else if t, ok := abs.(reflect.Type); ok {
-		str := t.String()
-		resolve(str)
-	} else if c.Bound(abs) {
-		str := reflection.TypeString(abs)
-		resolve(str)
-	} else {
-		fallback()
-	}
+	resolve(abs)
 
 	if constructed && instance.IsZero() {
 		// construct injection
@@ -241,18 +230,10 @@ func (c *Container) Instance(abs interface{}, params ...interface{}) (instance r
 		}
 	}
 
-	for k, p := range params {
-		if tp, ok := p.(reflect.Value); ok {
-			instance.Field(k).Set(tp)
-		} else {
-			instance.Elem().Field(k).Set(reflect.ValueOf(p))
-		}
-	}
-
 	return instance, e
 }
 
-func (c *Container) InstanceFor(abs interface{}, out interface{}, params ...interface{}) error {
+func (c *Container) InstanceFor(abs interface{}, out interface{}) error {
 	v, e := c.Instance(abs)
 	if e != nil {
 		return e
@@ -277,7 +258,7 @@ func (c *Container) InstanceFor(abs interface{}, out interface{}, params ...inte
 	return nil
 }
 
-func (c *Container) Invoke(f interface{}, params ...interface{}) ([]reflect.Value, error) {
+func (c *Container) Invoke(f interface{}) ([]reflect.Value, error) {
 	var t reflect.Type
 	var fun reflect.Value
 
@@ -309,53 +290,51 @@ func (c *Container) Invoke(f interface{}, params ...interface{}) ([]reflect.Valu
 	return fun.Call(in), nil
 }
 
-func (c *Container) GetRegisters() map[string]InstanceRegister {
+func (c *Container) GetRegisters() map[interface{}]InstanceRegister {
 	return c.registers
 }
 
-func (c *Container) getResolve(abs string) (reflect.Value, error) {
-	if resolved, ok := c.resolved[abs]; ok {
+func (c *Container) getResolve(abs interface{}) (reflect.Value, error) {
+	key := absKey(abs)
+	if resolved, ok := c.resolved[key]; ok {
 		return resolved, nil
 	}
 
-	if resolver, o := c.registers[abs]; o {
+	if resolver, o := c.registers[key]; o {
 		instance, e := resolver(c)
 		if e != nil {
 			return reflect.Value{}, e
 		}
 
-		if _, r := c.resolved[abs]; r && c.IsSingleton(abs) {
-			c.resolved[abs] = instance
+		if _, r := c.resolved[key]; r && c.IsSingleton(key) {
+			c.resolved[key] = instance
 		}
 
 		return instance, nil
 	}
 
-	return reflect.Value{}, UnregisterdAbstractError(abs)
+	return reflect.Value{}, UnregisterdAbstractError(reflection.TypeString(abs))
 }
 
 func (c *Container) Bound(abs interface{}) bool {
-	s := reflection.TypeString(abs)
-	_, o := c.registers[s]
+	_, o := c.registers[absKey(abs)]
 
 	return o
 }
 
-func (c *Container) Init() {
-	if c.registers == nil {
-		c.registers = map[string]InstanceRegister{}
-	}
-	if c.singletons == nil {
-		c.singletons = map[string]bool{}
-	}
-	if c.resolved == nil {
-		c.resolved = map[string]reflect.Value{}
-	}
-}
-
 func New() *Container {
-	c := &Container{}
-	c.Init()
+	c := &Container{
+		registers:  make(map[interface{}]InstanceRegister),
+		singletons: make(map[interface{}]bool),
+		resolved:   make(map[interface{}]reflect.Value),
+	}
 
 	return c
+}
+
+func absKey(abs interface{}) interface{} {
+	if s, ok := abs.(string); ok {
+		return s
+	}
+	return reflection.TypeOf(abs)
 }
