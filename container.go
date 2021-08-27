@@ -220,7 +220,9 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 			ind := reflect.Indirect(instance)
 			for i := 0; i < ind.NumField(); i++ {
 				fv := ind.Field(i)
-				if fv.IsZero() && fv.CanSet() && (fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Struct) {
+				if fv.IsZero() && fv.CanSet() && (fv.Kind() == reflect.Ptr ||
+					fv.Kind() == reflect.Struct ||
+					fv.Kind() == reflect.Interface) {
 					v, e := c.Instance(fv.Type())
 					if e == nil {
 						fv.Set(v)
