@@ -127,7 +127,7 @@ func (c *Container) Singleton(abs interface{}, instance interface{}) {
 }
 
 func (c *Container) IsSingleton(abs interface{}) bool {
-	typ := reflection.TypeString(abs)
+	typ := absKey(abs)
 
 	if v, ok := c.singletons[typ]; ok {
 		return v
@@ -299,16 +299,16 @@ func (c *Container) GetRegisters() map[interface{}]InstanceRegister {
 func (c *Container) getResolve(abs interface{}) (reflect.Value, error) {
 	key := absKey(abs)
 	if resolved, ok := c.resolved[key]; ok {
+
 		return resolved, nil
 	}
-
 	if resolver, o := c.registers[key]; o {
 		instance, e := resolver(c)
 		if e != nil {
 			return reflect.Value{}, e
 		}
 
-		if _, r := c.resolved[key]; r && c.IsSingleton(key) {
+		if _, r := c.resolved[key]; !r && c.IsSingleton(key) {
 			c.resolved[key] = instance
 		}
 

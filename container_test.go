@@ -284,3 +284,37 @@ func TestContainer_InstanceConstructInject(t *testing.T) {
 	}
 	t.Logf("invoke result %v", res)
 }
+
+func TestContainer_Singleton(t *testing.T) {
+	c := container.New()
+	c.BindFunc(&Single{}, func(c container.Interface) (reflect.Value, error) {
+		return reflect.ValueOf(&Single{}), nil
+	}, true)
+	v1, e := c.Invoke(Sfunc1)
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	v2, e := c.Invoke(Sfunc2)
+	if e != nil {
+		t.Fatal(e)
+	}
+
+	if v1[0].Interface().(string) != v2[0].Interface().(string) {
+		t.Log("singleton value unchanged")
+		t.Fail()
+	}
+}
+
+type Single struct {
+	Name string
+}
+
+func Sfunc1(s *Single) string {
+	s.Name = "123"
+	return s.Name
+}
+
+func Sfunc2(s *Single) string {
+	return s.Name
+}
