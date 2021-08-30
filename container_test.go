@@ -74,7 +74,7 @@ func TestContainer_Invoke(t *testing.T) {
 	})
 
 	t.Run("invoke func injection", func(t *testing.T) {
-		c.BindFunc(&foo{}, func(c container.Interface) (reflect.Value, error) {
+		c.BindFunc(&foo{}, func(c container.Interface) (interface{}, error) {
 			return reflect.ValueOf(&foo{name: "test foo"}), nil
 		}, false)
 
@@ -120,7 +120,7 @@ func TestTypeString(t *testing.T) {
 func TestContainer_InstanceFor(t *testing.T) {
 	c := container.New()
 
-	c.BindFunc("foo", func(c container.Interface) (reflect.Value, error) {
+	c.BindFunc("foo", func(c container.Interface) (interface{}, error) {
 
 		return reflect.ValueOf(&foo{"test name"}), nil
 	}, false)
@@ -192,7 +192,7 @@ func bindTable() []struct {
 	}{
 		{"string abs", "foo_s", &foo{name: "string abs"}, false},
 		{"string abs singleton", "foo_ss", &foo{name: "string abs singleton"}, true},
-		{"string abs func", "foo_s_f", container.InstanceRegister(func(c container.Interface) (reflect.Value, error) {
+		{"string abs func", "foo_s_f", container.InstanceRegister(func(c container.Interface) (interface{}, error) {
 			return reflect.ValueOf(&foo{name: "string abs func"}), nil
 		}), false},
 		{"type abs", typ, &foo{name: "type abs"}, false},
@@ -287,8 +287,8 @@ func TestContainer_InstanceConstructInject(t *testing.T) {
 
 func TestContainer_Singleton(t *testing.T) {
 	c := container.New()
-	c.BindFunc(&Single{}, func(c container.Interface) (reflect.Value, error) {
-		return reflect.ValueOf(&Single{}), nil
+	c.BindFunc(&Single{}, func(c container.Interface) (interface{}, error) {
+		return &Single{}, nil
 	}, true)
 	v1, e := c.Invoke(Sfunc1)
 	if e != nil {

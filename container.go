@@ -9,7 +9,7 @@ import (
 )
 
 // InstanceRegister register instance for container
-type InstanceRegister func(c Interface) (reflect.Value, error)
+type InstanceRegister func(c Interface) (interface{}, error)
 
 // Injector interface for conditional initializer
 type Injector interface {
@@ -154,14 +154,14 @@ func (c *Container) getResolver(instance interface{}) InstanceRegister {
 	var r InstanceRegister
 
 	if t, ok := instance.(reflect.Type); ok {
-		r = func(c Interface) (reflect.Value, error) {
+		r = func(c Interface) (interface{}, error) {
 			return reflect.New(t).Elem(), nil
 		}
 	} else if t, ok := instance.(InstanceRegister); ok {
 		r = t
 	} else {
-		r = func(c Interface) (reflect.Value, error) {
-			return reflection.ValueOf(instance), nil
+		r = func(c Interface) (interface{}, error) {
+			return instance, nil
 		}
 	}
 
@@ -307,12 +307,13 @@ func (c *Container) getResolve(abs interface{}) (reflect.Value, error) {
 		if e != nil {
 			return reflect.Value{}, e
 		}
+		instanceVal := reflection.ValueOf(instance)
 
 		if _, r := c.resolved[key]; !r && c.IsSingleton(key) {
-			c.resolved[key] = instance
+			c.resolved[key] = instanceVal
 		}
 
-		return instance, nil
+		return instanceVal, nil
 	}
 
 	return reflect.Value{}, UnregisterdAbstractError(reflection.TypeString(abs))
