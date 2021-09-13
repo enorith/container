@@ -19,4 +19,5 @@ type Interface interface {
 	IsSingleton(abs interface{}) bool
 	Bound(abs interface{}) bool
 	GetRegisters() map[interface{}]InstanceRegister
+	Clone() Interface
 }

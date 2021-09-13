@@ -199,7 +199,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 
 	resolve := func(abs interface{}) {
 		resolved, err := c.getResolve(abs)
-		if _, ok := e.(UnregisterdAbstractError); !ok {
+		if _, ok := err.(UnregisterdAbstractError); !ok {
 			e = err
 		}
 
@@ -290,6 +290,15 @@ func (c *Container) Invoke(f interface{}) ([]reflect.Value, error) {
 	}
 
 	return fun.Call(in), nil
+}
+
+func (c *Container) Clone() Interface {
+	return &Container{
+		registers:      c.registers,
+		singletons:     c.singletons,
+		resolved:       c.resolved,
+		injectionChain: c.injectionChain,
+	}
 }
 
 func (c *Container) GetRegisters() map[interface{}]InstanceRegister {
