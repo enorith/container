@@ -134,6 +134,38 @@ func TestContainer_InstanceFor(t *testing.T) {
 	t.Log(f)
 }
 
+func TestContainer_Clone(t *testing.T) {
+	c := container.New()
+	c.BindFunc("bar", func(c container.Interface) (interface{}, error) {
+		return TypeBar{}, nil
+	}, true)
+
+	for i := 0; i < 2; i++ {
+
+		go func(c *container.Container, i int) {
+			var f foo
+			cc := c.Clone()
+			cc.BindFunc("foo", func(c container.Interface) (interface{}, error) {
+				return &foo{fmt.Sprintf("test name %d", i)}, nil
+			}, true)
+
+			e := cc.InstanceFor("foo", &f)
+			if e != nil {
+				fmt.Println(e)
+			} else {
+				fmt.Println(f)
+			}
+			var b TypeBar
+			e = cc.InstanceFor("bar", &b)
+			if e != nil {
+				fmt.Println(e)
+			} else {
+				fmt.Println(b)
+			}
+		}(c, i)
+	}
+}
+
 type InitializeHandler struct {
 }
 
@@ -265,6 +297,7 @@ func TestContainer_InjectionChain(t *testing.T) {
 }
 
 type TypeBar struct {
+	a int
 }
 
 func (tf TypeBar) GetName() string {

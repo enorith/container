@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/enorith/supports/reflection"
 )
@@ -71,6 +72,8 @@ func conditionInjectionFunc(requireAbs interface{}, i InjectionFunc) InjectionFu
 
 //Container is a IoC-Container
 type Container struct {
+	mu sync.RWMutex
+
 	registers map[interface{}]InstanceRegister
 
 	singletons map[interface{}]bool
@@ -100,6 +103,8 @@ func (c *Container) InjectionCondition(f ConditionInjectionFunc, i InjectionFunc
 // 	Abstract could be string,reflect.Type,struct or pointer
 // 	Instance could be reflect.Value, struct, pointer or InstanceRegister
 func (c *Container) Bind(abstract, instance interface{}, singleton bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if instance == nil {
 		instance = abstract
@@ -293,11 +298,25 @@ func (c *Container) Invoke(f interface{}) ([]reflect.Value, error) {
 }
 
 func (c *Container) Clone() Interface {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	registers := make(map[interface{}]InstanceRegister)
+	singletons := make(map[interface{}]bool)
+
+	for k, ir := range c.registers {
+		registers[k] = ir
+	}
+	for ks, is := range c.singletons {
+		singletons[ks] = is
+	}
+	var ij injectionChain
+
+	copy(ij, c.injectionChain)
 	return &Container{
-		registers:      c.registers,
-		singletons:     c.singletons,
-		resolved:       c.resolved,
-		injectionChain: c.injectionChain,
+		registers:      registers,
+		singletons:     singletons,
+		resolved:       make(map[interface{}]reflect.Value),
+		injectionChain: ij,
 	}
 }
 
@@ -307,6 +326,8 @@ func (c *Container) GetRegisters() map[interface{}]InstanceRegister {
 
 func (c *Container) getResolve(abs interface{}) (reflect.Value, error) {
 	key := absKey(abs)
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if resolved, ok := c.resolved[key]; ok {
 
 		return resolved, nil
@@ -339,6 +360,7 @@ func New() *Container {
 		registers:  make(map[interface{}]InstanceRegister),
 		singletons: make(map[interface{}]bool),
 		resolved:   make(map[interface{}]reflect.Value),
+		mu:         sync.RWMutex{},
 	}
 
 	return c
