@@ -138,9 +138,9 @@ func TestContainer_Clone(t *testing.T) {
 	c := container.New()
 	c.BindFunc("bar", func(c container.Interface) (interface{}, error) {
 		return TypeBar{}, nil
-	}, true)
-
-	for i := 0; i < 2; i++ {
+	}, false)
+	c.WithInjector(InitializeHandler{})
+	for i := 0; i < 6; i++ {
 
 		go func(c *container.Container, i int) {
 			var f foo
@@ -153,14 +153,14 @@ func TestContainer_Clone(t *testing.T) {
 			if e != nil {
 				fmt.Println(e)
 			} else {
-				fmt.Println(f)
+				fmt.Println("foo", f, i)
 			}
 			var b TypeBar
 			e = cc.InstanceFor("bar", &b)
 			if e != nil {
 				fmt.Println(e)
 			} else {
-				fmt.Println(b)
+				fmt.Println("bar", b, i)
 			}
 		}(c, i)
 	}
@@ -177,8 +177,6 @@ func (i InitializeHandler) Injection(abs interface{}, last reflect.Value) (refle
 func (i InitializeHandler) When(abs interface{}) bool {
 
 	str := reflection.TypeString(abs)
-
-	fmt.Println(str)
 
 	return str == "container_test.foo"
 }

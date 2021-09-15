@@ -26,21 +26,41 @@ type injectionChain []InjectionFunc
 // ConditionInjectionFunc  conditional injection function
 type ConditionInjectionFunc func(abs interface{}) bool
 
-type UnregisterdAbstractError string
+type UnregisterdAbstractError struct {
+	Abs string
+}
 
 func (u UnregisterdAbstractError) Error() string {
-	return fmt.Sprintf("unregisterd abstract [%s]", string(u))
+	return fmt.Sprintf("unregisterd abstract [%s]", u.Abs)
+}
+
+type InjectPassedError struct {
+}
+
+func (InjectPassedError) Error() string {
+	return "abstract passed"
 }
 
 func (ic injectionChain) do(abs interface{}) (va reflect.Value, e error) {
 	t := reflection.TypeOf(abs)
 	ts := reflection.StructType(abs)
 	va = reflect.New(ts)
+	initilaized := false
 	for _, v := range ic {
 		va, e = v(abs, va)
 		if e != nil {
-			return
+			if _, ok := e.(InjectPassedError); ok {
+				continue
+			} else {
+				return
+			}
+		} else {
+			initilaized = true
 		}
+	}
+
+	if !initilaized {
+		return va, fmt.Errorf("abstract [%v] initilaize failed", abs)
 	}
 
 	if t.Kind() != reflect.Ptr && va.Kind() == reflect.Ptr {
@@ -66,13 +86,14 @@ func conditionInjectionFunc(requireAbs interface{}, i InjectionFunc) InjectionFu
 			}
 		}
 
-		return last, nil
+		return last, InjectPassedError{}
 	}
 }
 
 //Container is a IoC-Container
 type Container struct {
-	mu sync.RWMutex
+	parent *Container
+	mu     sync.RWMutex
 
 	registers map[interface{}]InstanceRegister
 
@@ -81,6 +102,55 @@ type Container struct {
 	resolved map[interface{}]reflect.Value
 
 	injectionChain injectionChain
+}
+
+func (c *Container) getRegister(abs interface{}) (InstanceRegister, bool) {
+	if ir, ok := c.registers[abs]; ok {
+		return ir, ok
+	}
+
+	if c.parent != nil {
+		ir, ok := c.parent.registers[abs]
+		return ir, ok
+	}
+
+	return nil, false
+}
+
+func (c *Container) isSingleton(abs interface{}) (bool, bool) {
+	is, ok := c.singletons[abs]
+	if ok {
+		return is, ok
+	}
+
+	if c.parent != nil {
+		is, ok := c.parent.singletons[abs]
+		return is, ok
+	}
+
+	return false, false
+}
+
+func (c *Container) getResolved(abs interface{}) (reflect.Value, bool) {
+	rv, ok := c.resolved[abs]
+	if ok {
+		return rv, ok
+	}
+
+	if c.parent != nil {
+		rv, ok := c.parent.resolved[abs]
+		return rv, ok
+	}
+
+	return reflect.Value{}, false
+}
+
+func (c *Container) getChain() injectionChain {
+	if c.parent != nil {
+		c.injectionChain = append(c.parent.injectionChain, c.injectionChain...)
+	}
+
+	return c.injectionChain
 }
 
 func (c *Container) WithInjector(h Injector) {
@@ -192,7 +262,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 
 	fallback := func() {
 		var va reflect.Value
-		va, e = c.injectionChain.do(abs)
+		va, e = c.getChain().do(abs)
 
 		if va.IsValid() {
 			instance = va
@@ -215,7 +285,8 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 			fallback()
 		}
 	}
-
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 	resolve(abs)
 
 	if constructed && instance.IsZero() {
@@ -298,25 +369,11 @@ func (c *Container) Invoke(f interface{}) ([]reflect.Value, error) {
 }
 
 func (c *Container) Clone() Interface {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	registers := make(map[interface{}]InstanceRegister)
-	singletons := make(map[interface{}]bool)
-
-	for k, ir := range c.registers {
-		registers[k] = ir
-	}
-	for ks, is := range c.singletons {
-		singletons[ks] = is
-	}
-	var ij injectionChain
-
-	copy(ij, c.injectionChain)
 	return &Container{
-		registers:      registers,
-		singletons:     singletons,
-		resolved:       make(map[interface{}]reflect.Value),
-		injectionChain: ij,
+		parent:     c,
+		registers:  make(map[interface{}]InstanceRegister),
+		singletons: map[interface{}]bool{},
+		resolved:   make(map[interface{}]reflect.Value),
 	}
 }
 
@@ -326,27 +383,28 @@ func (c *Container) GetRegisters() map[interface{}]InstanceRegister {
 
 func (c *Container) getResolve(abs interface{}) (reflect.Value, error) {
 	key := absKey(abs)
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if resolved, ok := c.resolved[key]; ok {
+
+	if resolved, ok := c.getResolved(key); ok {
 
 		return resolved, nil
 	}
-	if resolver, o := c.registers[key]; o {
+	if resolver, o := c.getRegister(key); o {
 		instance, e := resolver(c)
 		if e != nil {
 			return reflect.Value{}, e
 		}
 		instanceVal := reflection.ValueOf(instance)
 
-		if _, r := c.resolved[key]; !r && c.IsSingleton(key) {
-			c.resolved[key] = instanceVal
+		if _, r := c.resolved[key]; !r {
+			if is, _ := c.isSingleton(key); is {
+				c.resolved[key] = instanceVal
+			}
 		}
 
 		return instanceVal, nil
 	}
 
-	return reflect.Value{}, UnregisterdAbstractError(reflection.TypeString(abs))
+	return reflect.Value{}, UnregisterdAbstractError{Abs: reflection.TypeString(abs)}
 }
 
 func (c *Container) Bound(abs interface{}) bool {
