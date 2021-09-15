@@ -54,9 +54,8 @@ func (ic injectionChain) do(abs interface{}) (va reflect.Value, e error) {
 			} else {
 				return
 			}
-		} else {
-			initilaized = true
 		}
+		initilaized = true
 	}
 
 	if !initilaized {
