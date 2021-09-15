@@ -49,6 +49,7 @@ func (ic injectionChain) do(abs interface{}) (va reflect.Value, initilaized bool
 		va, e = v(abs, va)
 		if e != nil {
 			if _, ok := e.(InjectPassedError); ok {
+				e = nil
 				continue
 			} else {
 				return
