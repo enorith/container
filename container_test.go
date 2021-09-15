@@ -299,7 +299,7 @@ type TypeBar struct {
 }
 
 func (tf TypeBar) GetName() string {
-	return "bar"
+	return fmt.Sprintf("bar %d", tf.a)
 }
 
 func CallTypeBar(tb TypeBar) string {
@@ -308,6 +308,9 @@ func CallTypeBar(tb TypeBar) string {
 
 func TestContainer_InstanceConstructInject(t *testing.T) {
 	c := container.New()
+	c.BindFunc(TypeBar{}, func(c container.Interface) (interface{}, error) {
+		return TypeBar{a: 42}, nil
+	}, false)
 
 	res, e := c.Invoke(CallTypeBar)
 	if e != nil {
