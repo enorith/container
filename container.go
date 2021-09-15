@@ -41,11 +41,10 @@ func (InjectPassedError) Error() string {
 	return "abstract passed"
 }
 
-func (ic injectionChain) do(abs interface{}) (va reflect.Value, e error) {
+func (ic injectionChain) do(abs interface{}) (va reflect.Value, initilaized bool, e error) {
 	t := reflection.TypeOf(abs)
 	ts := reflection.StructType(abs)
 	va = reflect.New(ts)
-	initilaized := false
 	for _, v := range ic {
 		va, e = v(abs, va)
 		if e != nil {
@@ -56,10 +55,6 @@ func (ic injectionChain) do(abs interface{}) (va reflect.Value, e error) {
 			}
 		}
 		initilaized = true
-	}
-
-	if !initilaized {
-		return va, fmt.Errorf("abstract [%v] initilaize failed", abs)
 	}
 
 	if t.Kind() != reflect.Ptr && va.Kind() == reflect.Ptr {
@@ -261,7 +256,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 
 	fallback := func() {
 		var va reflect.Value
-		va, e = c.getChain().do(abs)
+		va, constructed, e = c.getChain().do(abs)
 
 		if va.IsValid() {
 			instance = va
@@ -288,7 +283,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 	// defer c.mu.RUnlock()
 	resolve(abs)
 
-	if constructed && instance.IsZero() {
+	if !constructed && instance.IsZero() {
 		// construct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:

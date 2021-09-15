@@ -308,9 +308,9 @@ func CallTypeBar(tb TypeBar) string {
 
 func TestContainer_InstanceConstructInject(t *testing.T) {
 	c := container.New()
-	c.BindFunc(TypeBar{}, func(c container.Interface) (interface{}, error) {
-		return TypeBar{a: 42}, nil
-	}, false)
+	// c.BindFunc(TypeBar{}, func(c container.Interface) (interface{}, error) {
+	// 	return TypeBar{a: 42}, nil
+	// }, false)
 
 	res, e := c.Invoke(CallTypeBar)
 	if e != nil {
