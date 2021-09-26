@@ -155,12 +155,14 @@ func TestContainer_Clone(t *testing.T) {
 			} else {
 				fmt.Println("foo", f, i)
 			}
-			var b TypeBar
-			e = cc.InstanceFor("bar", &b)
-			if e != nil {
-				fmt.Println(e)
-			} else {
-				fmt.Println("bar", b, i)
+			if cc.Bound("bar") {
+				var b TypeBar
+				e = cc.InstanceFor("bar", &b)
+				if e != nil {
+					fmt.Println(e)
+				} else {
+					fmt.Println("bar", b, i)
+				}
 			}
 		}(c, i)
 	}

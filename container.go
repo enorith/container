@@ -253,15 +253,15 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 	}()
 
 	// whether this abstract is constructed
-	constructed := false
+	// constructed := false
 
 	fallback := func() {
 		var va reflect.Value
-		va, constructed, e = c.getChain().do(abs)
+		va, _, e = c.getChain().do(abs)
 
 		if va.IsValid() {
 			instance = va
-			constructed = true
+			// constructed = true
 		} else {
 			instance = reflect.Value{}
 		}
@@ -275,7 +275,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 
 		if resolved.IsValid() {
 			instance = resolved
-			constructed = true
+			// constructed = true
 		} else {
 			fallback()
 		}
@@ -284,16 +284,17 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 	// defer c.mu.RUnlock()
 	resolve(abs)
 
-	if !constructed && instance.IsZero() {
+	if instance.IsZero() {
 		// construct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:
 			ind := reflect.Indirect(instance)
 			for i := 0; i < ind.NumField(); i++ {
 				fv := ind.Field(i)
-				if fv.IsZero() && fv.CanSet() && (fv.Kind() == reflect.Ptr ||
-					fv.Kind() == reflect.Struct ||
-					fv.Kind() == reflect.Interface) {
+				if fv.IsZero() && fv.CanSet() &&
+					(fv.Kind() == reflect.Ptr ||
+						fv.Kind() == reflect.Struct ||
+						fv.Kind() == reflect.Interface) {
 					v, e := c.Instance(fv.Type())
 					if e == nil {
 						fv.Set(v)
@@ -403,7 +404,7 @@ func (c *Container) getResolve(abs interface{}) (reflect.Value, error) {
 }
 
 func (c *Container) Bound(abs interface{}) bool {
-	_, o := c.registers[absKey(abs)]
+	_, o := c.getRegister(absKey(abs))
 
 	return o
 }
