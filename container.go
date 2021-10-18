@@ -276,7 +276,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 		if resolved.IsValid() {
 			instance = resolved
 			// constructed = true
-		} else {
+		} else if e == nil {
 			fallback()
 		}
 	}
@@ -284,7 +284,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 	// defer c.mu.RUnlock()
 	resolve(abs)
 
-	if instance.IsZero() {
+	if e == nil && instance.IsZero() {
 		// construct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:
