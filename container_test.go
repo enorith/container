@@ -285,6 +285,7 @@ func TestContainer_InjectionChain(t *testing.T) {
 	c := container.New()
 	c.WithInjector(&testStructInjector1{})
 	c.WithInjector(&testStructInjector2{})
+	fmt.Println(c.GetInjectionChain())
 	v, e := c.Invoke(getProp)
 	if e != nil {
 		t.Fatal(e)

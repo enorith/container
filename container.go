@@ -164,6 +164,10 @@ func (c *Container) InjectionCondition(f ConditionInjectionFunc, i InjectionFunc
 	c.InjectionWith(conditionInjectionFunc(f, i))
 }
 
+func (c *Container) GetInjectionChain() injectionChain {
+	return c.getChain()
+}
+
 // Bind: pre-bind abstract to container
 // 	Abstract could be string,reflect.Type,struct or pointer
 // 	Instance could be reflect.Value, struct, pointer or InstanceRegister
