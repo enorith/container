@@ -284,7 +284,7 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 	// defer c.mu.RUnlock()
 	resolve(abs)
 
-	if e == nil && instance.IsZero() {
+	if e == nil {
 		// construct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:
