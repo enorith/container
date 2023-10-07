@@ -85,7 +85,7 @@ func conditionInjectionFunc(requireAbs interface{}, i InjectionFunc) InjectionFu
 	}
 }
 
-//Container is a IoC-Container
+// Container is a IoC-Container
 type Container struct {
 	parent *Container
 	mu     sync.RWMutex
@@ -165,8 +165,9 @@ func (c *Container) InjectionCondition(f ConditionInjectionFunc, i InjectionFunc
 }
 
 // Bind: pre-bind abstract to container
-// 	Abstract could be string,reflect.Type,struct or pointer
-// 	Instance could be reflect.Value, struct, pointer or InstanceRegister
+//
+//	Abstract could be string,reflect.Type,struct or pointer
+//	Instance could be reflect.Value, struct, pointer or InstanceRegister
 func (c *Container) Bind(abstract, instance interface{}, singleton bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -283,12 +284,12 @@ func (c *Container) Instance(abs interface{}) (instance reflect.Value, e error) 
 	// c.mu.RLock()
 	// defer c.mu.RUnlock()
 	resolve(abs)
+	ind := reflect.Indirect(instance)
 
-	if e == nil {
+	if e == nil && ind.IsZero() {
 		// construct injection
 		switch instance.Kind() {
 		case reflect.Ptr, reflect.Struct:
-			ind := reflect.Indirect(instance)
 			for i := 0; i < ind.NumField(); i++ {
 				fv := ind.Field(i)
 				if fv.IsZero() && fv.CanSet() &&
